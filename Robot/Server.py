@@ -3,6 +3,16 @@ import RPi.GPIO as GPIO;
 import sys
 import threading
 import time
+import io
+import numpy as np
+import cv2
+import socket
+import pickle
+import picamera
+import picamera.array
+import time
+import struct
+
 
 RIGHT_STEP = 23;
 RIGHT_DIRECTION = 22;
@@ -16,13 +26,10 @@ GPIO.setup(RIGHT_DIRECTION, GPIO.OUT);
 GPIO.setup(LEFT_STEP, GPIO.OUT);
 GPIO.setup(LEFT_DIRECTION, GPIO.OUT);
 
-HOST = '192.168.1.73'
-PORT = 2256
+HOST = '172.20.10.2'
+PORT = 2255
 
-s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-s.bind((HOST, PORT))
-s.listen(1)
-conn, addr = s.accept()
+
 
 def goForward():
 
@@ -82,41 +89,115 @@ def start():
         GPIO.output(LEFT_STEP, 0)
         time.sleep(250/1000000)
 
+def cam_stream():
+
+    global HOST
+    port = 2250
+    
+    encode_param = [int(cv2.IMWRITE_JPEG_QUALITY), 90]
     
 
-print('Connected by', addr)
-while True:
-    data = conn.recv(2)
-    if not data:
-        break
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s.bind((HOST, port))
+        s.listen(1)
+        conn, addr = s.accept()
 
-    print(data)
+        
+        while True:
 
-    if data == 'w':
-        goForward();
+            print(addr)
+
+            #ret, frame = cap.read()
+
+            #result, frame = cv2.imencode('.jpg', frame, encode_param)
 
 
-    elif data == 'a':
-        goLeft();
+            with picamera.PiCamera() as camera:
+                with picamera.array.PiRGBArray(camera) as stream:
+                    camera.resolution = (720, 720)
+                    camera.framerate = 30
+
+                    while True:
+                        camera.capture(stream, 'bgr', use_video_port=True) 
+
+                        buff = stream.array
+
+                        
+                        
+                        result, frame = cv2.imencode('.jpg', buff, encode_param)
+                        data = pickle.dumps(frame, 0)
+                       
+                        # Prefix each message with a 4-byte length (network byte order)
+                        msg = struct.pack('>I', len(data)) + data
+                        conn.sendall(msg)
+                        
+                        # reset the stream before the next capture
+                        stream.seek(0)
+                        stream.truncate()
+    finally:
+        # When everything done, release the capture
+        cv2.destroyAllWindows()
+        s.shutdown(socket.SHUT_RDWR)
+        s.close
+        print('done')  
+
+                        
+cam = threading.Thread(target=cam_stream, args=())
+cam.start()
 
 
-    elif data == 'd':
-        goRight();
+try:
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    s.bind((HOST, PORT))
+    s.listen(1)
+    conn, addr = s.accept()
 
-    elif data == 'sw':
-        stop();
 
-    elif data == 'sa':
-        stop();
+    print('Connected by', addr)
+    while True:
+        data = conn.recv(2)
+        data = data.decode()
+        if not data:
+            break
 
-    elif data == 'sd':
-        stop();
+        print(data)
+
+        if data == 'w':
+            goForward();
+
+
+        elif data == 'a':
+            goLeft();
+
+
+        elif data == 'd':
+            goRight();
+
+        elif data == 'sw':
+            stop();
+
+        elif data == 'sa':
+            stop();
+
+        elif data == 'sd':
+            stop();
+
+finally:
+        # When everything done, release the capture
+        s.shutdown(socket.SHUT_RDWR)
+        s.close
+        print('done')  
+
+
 
     
+
+ 
         
         
-        
-        
+
+
 
 
 
