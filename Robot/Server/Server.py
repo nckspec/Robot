@@ -20,7 +20,7 @@ RIGHT_DIRECTION = 16;
 
 
 #  Set the ip address for the server
-HOST = '172.20.10.2'
+HOST = '192.168.1.80'
 
 #  Set the port to be used
 PORT = 2255
@@ -39,8 +39,9 @@ try:
     conn, addr = s.accept()
 
     robot = Robot(conn, RIGHT_STEP, RIGHT_DIRECTION, LEFT_STEP, LEFT_DIRECTION)
-
     robot.camera.run()
+
+
 
     print('Connected by', addr)
     while True:
@@ -83,7 +84,7 @@ finally:
         # When everything done, release the capture
         robot.camera.stop()
         time.sleep(5)
-        s.shutdown(socket.SHUT_RDWR)
+        s.shutdown(socket.SHUT_WR)
         s.close
         print('done')
 

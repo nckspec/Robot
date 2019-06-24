@@ -41,7 +41,7 @@ class CameraServer:
                     with picamera.array.PiRGBArray(camera) as stream:
                         #  Set the resolution as 720 by 720 and framerate at 30
                         camera.resolution = (720, 720)
-                        camera.framerate = 30
+                        camera.framerate = 25
 
                         #  Loop indefinitely
                         while self.__camServerOn:
