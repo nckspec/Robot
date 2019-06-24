@@ -3,7 +3,7 @@ import RPi.GPIO as GPIO;
 import socket
 import threading
 
-from CameraServer import CameraServer
+from CameraCapture import CameraCapture
 
 class Robot:
 
@@ -18,7 +18,7 @@ class Robot:
         self.__rightDirection = rightDirection
         self.__leftStep = leftStep
         self.__leftDirection = leftDirection
-        self.camera = CameraServer(conn)
+        self.camera = CameraCapture(conn)
 
         #  Setup the output pins that will be used
         GPIO.setmode(GPIO.BCM);

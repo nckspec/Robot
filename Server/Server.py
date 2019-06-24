@@ -1,104 +1,100 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+import pygame
 import sys
-import socket
-import io
+import os
+import pygame.display
 import time
+import pygame
+from pygame.locals import *
+import pickle
+import struct
+import socket
+
+from CameraViewer import CameraViewer
+from functions import recvall, keysPressed
+
+#  PROCESSING: Initialize pygame
+pygame.init()
+
+#  PROCESSING: Constants holding the host's ip address and it's port number
+HOST = '192.168.1.70'    # The server's hostname or IP address
+PORT = 2255             # The port used by the Robot Control Server
+
+#  PROCESSING: Creates a window to display the cam stream and take input
+pygame.display.set_caption("Roger")
+screen = pygame.display.set_mode([720,720])
 
 
 
 
 
+#  create the socket for the camera stream
+s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+s.bind((HOST, PORT))
+s.listen(1)
 
-from Robot import Robot
+#  Wait for an incoming connection
+conn, addr = s.accept()
 
+#  Create a camStream object that is initialized with the PyGame screen and the socket we just opened
+camStream = CameraViewer(screen, conn)
 
-
-#  Declare the pins that will be used
-LEFT_STEP = 23;
-LEFT_DIRECTION = 22;
-RIGHT_STEP = 6;
-RIGHT_DIRECTION = 16;
-
-
-#  Set the ip address for the server
-HOST = '192.168.1.80'
-
-#  Set the port to be used
-PORT = 2255
-
+#  PROCESSING: Start the camStream
+camStream.start()
 
 
 try:
 
-    #  create the socket for the camera stream
-    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-    s.bind((HOST, PORT))
-    s.listen(1)
 
-    #  Wait for an incoming connection
-    conn, addr = s.accept()
-
-    robot = Robot(conn, RIGHT_STEP, RIGHT_DIRECTION, LEFT_STEP, LEFT_DIRECTION)
-    robot.camera.run()
-
-
-
-    print('Connected by', addr)
     while True:
 
-        #  Receive the 2 bytes of data containing the command from the client
-        data = conn.recv(2)
 
-        #  Decode the 2 bytes of data
-        data = data.decode()
-        if not data:
-            break
+        #  Run this code when any key is pressed
+        for event in pygame.event.get():
 
+                #  Store all of the pressed keys
+                keys = pygame.key.get_pressed()
 
-        #  IF a 'w' was received, then go forward
-        if data == 'w':
-            print(data)
-            robot.goForward();
+                #  If you exit the pywindow, exit the program
+                if event.type == pygame.QUIT:
+                    sys.exit()
+                
+                #  If 'w' is pressed, send a 'w' to the server
+                if keys[pygame.K_w] == True and keysPressed() == 1:
+                    conn.sendall('w'.encode())
+                    
+                #  If 'a' is pressed, send a 'a' to the server
+                if keys[pygame.K_a] == True and keysPressed() == 1:
+                    conn.sendall('a'.encode())
 
+                #  If 'd' is pressed, send a 'd' to the server
+                if keys[pygame.K_d] == True and keysPressed() == 1:
+                    conn.sendall('d'.encode())
 
-        #  IF a 'a' was received, then go left
-        elif data == 'a':
-            robot.goLeft();
+                #  If any key is released
+                if event.type == pygame.KEYUP:
 
-        #  IF a 'd' was received, then go right
-        elif data == 'd':
-            robot.goRight();
+                    #  if 'w' was released, then send 'sw' to the server
+                    if keys[pygame.K_w] == False:
+                        conn.sendall('sw'.encode())
 
-        #  IF a 'sw', 'sa', or 'sd' was received then stop robot
-        elif data == 'sw' or data == 'sa' or data == 'sd':
-            robot.stop();
+                    #  if 'a' was released, then send 'sa' to the server
+                    if keys[pygame.K_a] == False:
+                        conn.sendall('sa'.encode())
 
-        #  PROCESSING: If the client sends 'ex' that means it has exited
-        elif data == 'ex':
-            break
-
-
+                    #  if 'd' was released, then send 'sd' to the server
+                    if keys[pygame.K_d] == False: 
+                        conn.sendall('sd'.encode())
 
 
 finally:
-        # When everything done, release the capture
-        robot.camera.stop()
-        time.sleep(5)
-        s.shutdown(socket.SHUT_WR)
-        s.close
-        print('done')
 
+    #  PROCESSING: Close the socket
+    s.shutdown(socket.SHUT_WR)
+    s.close()
 
-
-
-
-
-
-
-
-
-
-
-
-
-
+    #  PROCESSING: Exit the Pygame Window
+    pygame.quit()

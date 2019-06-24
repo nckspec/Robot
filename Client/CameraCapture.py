@@ -6,7 +6,7 @@ import socket
 import struct
 import cv2
 
-class CameraServer:
+class CameraCapture:
 
     def __init__(self, conn):
         self.__conn = conn

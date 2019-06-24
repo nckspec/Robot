@@ -8,7 +8,7 @@ from pygame.locals import *
 import pygame.display
 from functions import recvall
 
-class CameraClient:
+class CameraViewer:
 
     #  PROCESSING: Initialize object with the PyGame screen object and the socket object that it will be communicating
     #  through
